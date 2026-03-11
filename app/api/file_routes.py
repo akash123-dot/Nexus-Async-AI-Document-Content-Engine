@@ -55,6 +55,9 @@ async def upload_file(
     current_user: AuthUser = Depends(get_current_user),
     supabase: AsyncClient = Depends(get_supabase_client),
 ):
+    redis = await get_redis()
+
+
     await rate_limiter(
         user_id = current_user.id,
         endpoint = request.url.path
@@ -117,6 +120,9 @@ async def upload_file(
         payload = jsonable_encoder(UserFileOut.model_validate(responce))
 
         await publish_user_task(user_id=current_user.id, task_type="file_processing", payload=payload)
+
+        redis.set(unique_file_name, "processing", ex=600)
+
         return responce
     
     except Exception as e:
@@ -129,12 +135,21 @@ async def upload_file(
 
 @router.post("/upload/status", status_code=status.HTTP_201_CREATED)
 async def upload_status(
-    unique_id: str = Body(...),
+    unique_file_name: str = Body(...),
     # db: AsyncSession = Depends(get_async_session),
     # current_user: AuthUser = Depends(get_current_user),
 ):
 
-    result = get_redis
+    redis = await get_redis()
+
+    status = await redis.get(unique_file_name)
+    if not status:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Not found or expired",
+        )
+    
+    return status
 
 
 

@@ -5,6 +5,7 @@ from app.rag.file_download.tem_file_download import processing_file_message
 from app.services.content_generation.intent_parser import intent_parser
 from app.config.connect_supabase import get_supabase_client
 from app.config.database import AsyncSessionLocal
+from app.config.redis import get_redis
 
 MAX_RETRIES = 3
 
@@ -17,6 +18,7 @@ async def handle_message(message: IncomingMessage):
         
         data = json.loads(message.body)
         supabase = await get_supabase_client()
+        redis = await get_redis()
 
         try:
             print(f"LOG: Processing task {data['message_id']} (Attempt {data['retry_count']})")
@@ -34,10 +36,15 @@ async def handle_message(message: IncomingMessage):
 
                 if is_success:
                     print("Task Success. Message will be Auto-Acked.")
+             
+                    await redis.set(payload["file_name"], "DONE", ex=600)
+                    
                     return
                 
                 else:
+                    await redis.set(payload["file_name"], "FAILED", ex=600)
                     raise Exception("Business Logic returned False (Save Failed)")
+                
                 
             elif data["task_type"] == "content_generation":
 
