@@ -13,7 +13,7 @@ async def connect_rabbitmq():
     global connection, channel
     
 
-    connection = await aio_pika.connect_robust("amqp://guest:guest@localhost/")
+    connection = await aio_pika.connect_robust("amqp://guest:guest@rabbitmq/")
 
     channel = await connection.channel()
 

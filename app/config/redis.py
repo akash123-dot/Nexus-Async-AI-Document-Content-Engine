@@ -6,7 +6,7 @@ redis: Redis | None = None
 async def init_redis() ->None:
     global redis
     redis = Redis(
-        host="localhost",
+        host="redis",
         port=6379,
         decode_responses=True,
         max_connections=20,  
