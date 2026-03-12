@@ -121,7 +121,7 @@ async def upload_file(
 
         await publish_user_task(user_id=current_user.id, task_type="file_processing", payload=payload)
 
-        redis.set(unique_file_name, "processing", ex=600)
+        redis.set(responce.file_name, "processing", ex=600)
 
         return responce
     
