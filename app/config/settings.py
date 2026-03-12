@@ -3,10 +3,8 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 load_dotenv()
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+psycopg://postgres:postgres@postgres:5432/fastapi_test_db"
-)
+DATABASE_URL = "postgresql+asyncpg://postgres:postgres@postgres:5432/fastapi_test_db"
+
 
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 
