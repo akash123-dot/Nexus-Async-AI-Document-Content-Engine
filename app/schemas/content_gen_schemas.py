@@ -60,11 +60,11 @@ class Tone(str, Enum):
 
 
 class Length(str, Enum):
-    very_short = "very_short"  # < 200 words
-    short = "short"  # 200-500 words
-    medium = "medium"  # 500-1000 words
-    long = "long"  # 1000-2000 words
-    very_long = "very_long"  # > 2000 words
+    very_short = "very_short"  
+    short = "short"  
+    medium = "medium"  
+    long = "long"  
+    very_long = "very_long"  
 
 
 class Audience(str, Enum):
@@ -109,7 +109,7 @@ class ContentGenerationConfig(BaseModel):
     length: Length = Length.medium
     audience: Audience = Audience.general
     creativity_level: Creativity = Creativity.medium
-    structure_type: StructureType = StructureType.basic
+    structure_type: StructureType = StructureType.basic ##
     writing_style: Optional[WritingStyle] = None
     topic: str
     #realtime search

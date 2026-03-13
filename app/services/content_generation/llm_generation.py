@@ -43,10 +43,10 @@ async def content_generation(prompt: str, temperature: float, toolcall: callable
     try:
         response = await llm.ainvoke(messages)
 
-        clean_text = clean_text(response.content)
+        cleaned_text  = clean_text(response.content)
 
 
-        return {"content": clean_text, "status": "success"}
+        return {"content": cleaned_text , "status": "success"}
 
     except Exception as e:
         return {"content": f"Error generating content: {e}", "status": "failed"}

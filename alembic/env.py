@@ -14,7 +14,8 @@ sys.path.append(str(BASE_DIR))
 from app.config.database import Base
 from app import models
 
-from app.config.settings import DATABASE_URL
+from app.config.settings import settings
+
 
 
 
@@ -28,7 +29,7 @@ if config.config_file_name is not None:
 
 
 
-SYNC_DATABASE_URL = DATABASE_URL.replace(
+SYNC_DATABASE_URL = settings.DATABASE_URL.replace(
     "postgresql+asyncpg",
     "postgresql+psycopg"
 )

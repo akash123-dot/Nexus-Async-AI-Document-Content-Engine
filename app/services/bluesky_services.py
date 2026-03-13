@@ -53,7 +53,7 @@ class BlueskyServices:
 
     async def disconnect_bluesky(self, user_id: int):
 
-        account = await self.repo.get_bluesky_account(user_id)
+        account = await self.repo.get_bluesky_full_account_details(user_id)
 
         if not account:
             raise BlueskyAccountNotConnected()
