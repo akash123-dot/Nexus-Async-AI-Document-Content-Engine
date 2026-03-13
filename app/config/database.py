@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import (
 
 from sqlalchemy.orm import declarative_base
 from typing import AsyncGenerator
+from app.config.settings import settings
 
 engine = create_async_engine(
-    DATABASE_URL,
+    settings.DATABASE_URL,
     echo=False,
     pool_size=30,
     max_overflow=50,

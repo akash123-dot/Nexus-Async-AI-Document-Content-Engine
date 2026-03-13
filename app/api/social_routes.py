@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.schemas import BlueskyConnectRequest, PostRequest
 from app.services.bluesky_services import BlueskyServices
 from app.core.rate_limiter import rate_limiter
-
+from app.core.security import decrypt_password
 
 router = APIRouter(prefix="/social", tags=["social"])
 
@@ -113,9 +113,18 @@ async def post_to_bluesky(
             status_code=401,
             detail="Bluesky account not connected. POST to /social/auth/bluesky/connect first."
         )
+    
+    try:
+        password = decrypt_password(result.app_password)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid password."
+        )
 
 
-    session = await create_bluesky_session(result.handle, result.app_password)
+    session = await create_bluesky_session(result.handle, password)
 
     access_jwt = session["accessJwt"]
     did = session["did"]  

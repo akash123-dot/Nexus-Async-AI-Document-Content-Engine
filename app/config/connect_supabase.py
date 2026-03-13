@@ -1,11 +1,12 @@
 from supabase import create_async_client, AsyncClient
-import os
-from dotenv import load_dotenv
+from app.config.settings import settings
+# import os
+# from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_URL = settings.SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY = settings.SUPABASE_SERVICE_ROLE_KEY
 
 _supabase: AsyncClient | None = None
 

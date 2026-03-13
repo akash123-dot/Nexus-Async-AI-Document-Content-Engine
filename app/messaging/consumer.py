@@ -25,6 +25,8 @@ async def handle_message(message: IncomingMessage):
             
             if data["task_type"] == "file_processing":
                 payload = data["payload"]
+                file_id = payload["file_name"].split(".")[0]
+
                 # --- BUSINESS LOGIC---
                 is_success = await processing_file_message(
                     file_path=payload["storage_path"],
@@ -37,12 +39,12 @@ async def handle_message(message: IncomingMessage):
                 if is_success:
                     print("Task Success. Message will be Auto-Acked.")
              
-                    await redis.set(payload["file_name"], "DONE", ex=600)
+                    await redis.set(file_id, "DONE", ex=600)
                     
                     return
                 
                 else:
-                    await redis.set(payload["file_name"], "FAILED", ex=600)
+                    await redis.set(file_id, "FAILED", ex=600)
                     raise Exception("Business Logic returned False (Save Failed)")
                 
                 

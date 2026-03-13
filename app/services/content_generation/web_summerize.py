@@ -1,6 +1,8 @@
 import requests 
 import re
-from app.config.settings import llm, NEWS_API_KEY
+from app.config.settings import llm, settings
+
+NEWS_API_KEY = settings.NEWS_API_KEY
 
 
 
@@ -11,6 +13,9 @@ async def search_web(question:str)->str:
     news = f"https://newsapi.org/v2/everything?q={question}&from=2026-03-02&to=2026-03-02&sortBy=popularity&apiKey={NEWS_API_KEY}"
 
     response = requests.get(news)
+
+    if response.status_code != 200:
+        return "No news found"
 
     data = response.json()
 

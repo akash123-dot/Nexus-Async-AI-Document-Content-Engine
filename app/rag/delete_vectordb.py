@@ -1,13 +1,15 @@
 from pinecone import Pinecone
 from fastapi.concurrency import run_in_threadpool
-from dotenv import load_dotenv
-import os
-load_dotenv()
+from app.config.settings import settings
+# from dotenv import load_dotenv
+# import os
+# load_dotenv()
 
-PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
+PINECONE_API_KEY = settings.PINECONE_API_KEY
+PINECONE_INDEX = settings.PINECONE_INDEX
 
 pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index("vectortesting")
+index = pc.Index(PINECONE_INDEX)
 
 
 

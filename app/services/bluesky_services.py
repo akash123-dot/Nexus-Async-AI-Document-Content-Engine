@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.bluesky_repo import BlueskyRepository
-
+from app.core.security import encrypt_password
 
 
 
@@ -30,7 +30,7 @@ class BlueskyServices:
             user_id,
             social_platform,
             handle,
-            app_password
+            app_password = encrypt_password(app_password)
         )
         if not account:
             raise 

@@ -57,14 +57,14 @@ class BlueskyRepository:
         return result.one_or_none()
     
 
-    async def get_bluesky_account(self, user_id: int):
-        result = await self.db.execute(
-            select(UserSocialAccounts).where(
-                UserSocialAccounts.user_id == user_id,
-                UserSocialAccounts.social_platform == "bluesky",
-            )
-        )
-        return result.scalar_one_or_none()
+    # async def get_bluesky_account(self, user_id: int):
+    #     result = await self.db.execute(
+    #         select(UserSocialAccounts).where(
+    #             UserSocialAccounts.user_id == user_id,
+    #             UserSocialAccounts.social_platform == "bluesky",
+    #         )
+    #     )
+    #     return result.scalar_one_or_none()
 
     async def delete_account(self, account: UserSocialAccounts):
         await self.db.delete(account)

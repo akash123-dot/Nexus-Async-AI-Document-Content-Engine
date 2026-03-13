@@ -1,7 +1,7 @@
 import tempfile
 import os
 from supabase import create_async_client, AsyncClient
-from app.config.settings import BUCKET_NAME
+from app.config.settings import settings
 from app.rag.pdf_chunck import read_pdf, chunks_pdf_data, choose_chunk_strategy
 from app.rag.officeword_chunk import read_doc, chunks_doc_data, choose_chunk_strategy
 from app.rag.text_file_chunck import read_text, chunks_text_data, choose_chunk_strategy
@@ -11,11 +11,6 @@ from app.rag.save_vectordb import save_to_pinecone
 # load_dotenv()
 
 
-# BUCKET_NAME = "file_store"
-# SUPABASE_URL = os.getenv("SUPABASE_URL")
-# SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-# supabase : AsyncClient = create_async_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-
 
 PROCESSOR_MAP = {
     ".pdf": (read_pdf, choose_chunk_strategy, chunks_pdf_data),
@@ -24,6 +19,8 @@ PROCESSOR_MAP = {
     ".txt": (read_text, choose_chunk_strategy, chunks_text_data),
     # ".json": (read_json, chunks_json_data) # Add when ready
     }
+
+BUCKET_NAME = settings.BUCKET_NAME
 
 async def processing_file_message(file_path, user_id, file_id, file_name, supabase:AsyncClient):
 
@@ -71,7 +68,7 @@ async def processing_file_message(file_path, user_id, file_id, file_name, supaba
 
         status = await save_to_pinecone(chunks, user_id)
 
-        print("Status:", status)
+        # print("Status:", status)
         return bool(status)
 
     finally:

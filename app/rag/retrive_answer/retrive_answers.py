@@ -1,30 +1,30 @@
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.runnables import RunnablePassthrough
-from langchain_google_genai import ChatGoogleGenerativeAI
+# from langchain_core.runnables import RunnablePassthrough
+# from langchain_google_genai import ChatGoogleGenerativeAI
 from pinecone import Pinecone
-from dotenv import load_dotenv
-import os
-load_dotenv()
+from app.config.settings import settings
+from app.config.settings import llm
 
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-PINECONE_API_KEY = os.environ.get("PINECONE_API_KEY")
+GOOGLE_API_KEY = settings.GOOGLE_API_KEY
+PINECONE_API_KEY = settings.PINECONE_API_KEY
+PINECONE_INDEX = settings.PINECONE_INDEX
 
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    temperature=0,
-    max_tokens=None,
-    timeout=None,
-    max_retries=5,
-    convert_system_message_to_human=True,
-    api_key=GOOGLE_API_KEY
-)
+# llm = ChatGoogleGenerativeAI(
+#     model="gemini-2.5-flash",
+#     temperature=0,
+#     max_tokens=None,
+#     timeout=None,
+#     max_retries=5,
+#     convert_system_message_to_human=True,
+#     api_key=GOOGLE_API_KEY
+# )
 
 embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", api_key=GOOGLE_API_KEY)
 pc = Pinecone(api_key=PINECONE_API_KEY)
-index = pc.Index("vectortesting")
+index = pc.Index(PINECONE_INDEX)
 
 async def retrive_answer(question, user_id, file_id, k=8) -> dict:
     

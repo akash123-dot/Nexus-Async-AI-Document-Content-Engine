@@ -136,6 +136,7 @@ class ContentGenerationConfig(BaseModel):
 class ContentGenerationMetadata(BaseModel):
     unique_task_id: str 
     user_id: int
+    question: str
     task_type: str
 
 

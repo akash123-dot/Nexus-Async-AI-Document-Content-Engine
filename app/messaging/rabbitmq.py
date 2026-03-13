@@ -1,5 +1,6 @@
 import aio_pika
 from aio_pika import ExchangeType
+from app.config.settings import settings
 
 connection = None
 channel = None
@@ -13,7 +14,8 @@ async def connect_rabbitmq():
     global connection, channel
     
 
-    connection = await aio_pika.connect_robust("amqp://guest:guest@rabbitmq/")
+    # connection = await aio_pika.connect_robust("amqp://guest:guest@rabbitmq/")
+    connection = await aio_pika.connect_robust(settings.RABBITMQ_URL)
 
     channel = await connection.channel()
 

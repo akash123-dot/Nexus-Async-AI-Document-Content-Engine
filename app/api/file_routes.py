@@ -16,7 +16,7 @@ from typing import Annotated
 from fastapi.encoders import jsonable_encoder
 from app.rag.retrive_answer.retrive_answers import generate_answer
 from app.rag.delete_vectordb import delete_user_database
-from app.config.settings import BUCKET_NAME
+from app.config.settings import settings
 from app.config.redis import get_redis
 # import magic
 import uuid
@@ -40,10 +40,8 @@ ALLOWED_EXTENSIONS = {".pdf", ".txt", ".doc", ".docx"}
 
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
+BUCKET_NAME = settings.BUCKET_NAME
 
-# SUPABASE_URL = os.getenv("SUPABASE_URL")
-# SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-# get_supabase_client = create_async_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
@@ -121,7 +119,7 @@ async def upload_file(
 
         await publish_user_task(user_id=current_user.id, task_type="file_processing", payload=payload)
 
-        redis.set(responce.file_name, "processing", ex=600)
+        redis.set(file_id, "processing", ex=600)
 
         return responce
     

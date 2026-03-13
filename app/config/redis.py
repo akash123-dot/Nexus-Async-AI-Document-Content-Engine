@@ -1,15 +1,15 @@
 import asyncio
 from redis.asyncio import Redis
-
+from app.config.settings import settings
 redis: Redis | None = None
 
 async def init_redis() ->None:
     global redis
     redis = Redis(
-        host="redis",
-        port=6379,
+        host=settings.REDIS_HOST,
+        port=settings.REDIS_PORT,
         decode_responses=True,
-        max_connections=20,  
+        max_connections=settings.REDIS_MAX_CONNECTIONS,  
     )
 
 async def close_redis() -> None:

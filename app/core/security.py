@@ -6,6 +6,8 @@ import base64
 import secrets
 import json
 from datetime import datetime
+from cryptography.fernet import Fernet
+from app.config.settings import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], bcrypt__rounds=10, deprecated="auto")
 bcrypt_limiter = anyio.CapacityLimiter(10)
@@ -21,6 +23,23 @@ async def verify_password(plain_password: str, hashed_password: str) -> bool:
         lambda: pwd_context.verify(plain_password, hashed_password), limiter=bcrypt_limiter
     )
 
+
+
+
+
+MASTER_KEY = settings.BLUESKY_PASSWORD_SECRET
+
+fernet = Fernet(MASTER_KEY)
+
+
+def encrypt_password(password: str) -> str:
+    encrypted = fernet.encrypt(password.encode())
+    return encrypted.decode()
+
+
+def decrypt_password(encrypted_password: str) -> str:
+    decrypted = fernet.decrypt(encrypted_password.encode())
+    return decrypted.decode()
 
 
 
