@@ -63,12 +63,12 @@ async def handle_message(message: IncomingMessage):
                         await session.rollback()
                         raise 
 
-                # if is_success:
-                #     print("Task Success. Message will be Auto-Acked.")
-                #     return
+                if is_success:
+                    print("Task Success. Message will be Auto-Acked.")
+                    return
                 
-                # else:
-                #     raise Exception("Business Logic returned False (Save Failed)" )
+                else:
+                    raise Exception("Business Logic returned False (Save Failed)" )
     
 
         except Exception as e:
