@@ -5,6 +5,7 @@ from app.core.security import hash_password
 from app.repositories.auth_repo import AuthUserRepository
 from app.core.jwt import create_access_token, create_refresh_token
 from app.core.store_token_redis import store_refresh_token
+from .exceptions import UserAlreadyExistsError
 # from fastapi import HTTPException, status
 
 class AuthUserService:
@@ -62,5 +63,3 @@ class AuthUserService:
         return {"access_token": create_token, "refresh_token": refresh_token}
 
 
-class UserAlreadyExistsError(Exception):
-    pass

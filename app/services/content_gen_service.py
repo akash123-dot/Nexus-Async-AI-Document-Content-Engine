@@ -5,6 +5,7 @@ from app.models.sql_models import ContentGenerationTask
 from typing import Optional
 from fastapi import HTTPException
 from datetime import datetime
+from .exceptions import NotFoundException
 # from repository import ContentTaskRepository
 
 
@@ -36,7 +37,7 @@ class ContentGenerationService:
         )
 
         if task == 0:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise NotFoundException("Task not found")
 
         await db.commit()
     
@@ -53,7 +54,7 @@ class ContentGenerationService:
         result = await UserContentGenRepository.view_content_task(db, unique_task_id, user_id)
 
         if result is None:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise NotFoundException("Task not found")
 
         return result
 
@@ -64,34 +65,30 @@ class ContentGenerationService:
         unique_task_id: str,
         user_id: int,
     ):
-        try:
-            result = await UserContentGenRepository.delete_content_task(db, unique_task_id, user_id)
-            if result.rowcount == 0:
-                raise HTTPException(status_code=404, detail="Task not found")
+        
+        result = await UserContentGenRepository.delete_content_task(db, unique_task_id, user_id)
+        if result.rowcount == 0:
+            raise NotFoundException("Task not found")
             
-            await db.commit()
-        except Exception as e:
-            raise e
+        await db.commit()
+ 
 
-        return 
+        return result
         
     @staticmethod
     async def delete_all_content_task(
         db: AsyncSession,
         user_id: int,
     ):
-        try:
-            result = await UserContentGenRepository.delete_all_content_task(db, user_id)
-            if result.rowcount == 0:
-                raise HTTPException(status_code=404, detail="Task not found")
+       
+        result = await UserContentGenRepository.delete_all_content_task(db, user_id)
+        if result.rowcount == 0:
+            raise NotFoundException("Task not found")
             
 
-
-            await db.commit()
-        except Exception as e:
-            raise e
-
-        return
+        await db.commit()
+  
+        return result
 
 
     @staticmethod

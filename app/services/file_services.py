@@ -3,6 +3,7 @@ from app.models.sql_models import UserFileMetadata
 from app.schemas.schemas import FileMetadata
 from app.repositories.file_repo import UserFileRepository
 from fastapi import HTTPException
+from .exceptions import NotFoundException, BadRequestException
 
 class UserFileService:
     @staticmethod
@@ -13,7 +14,7 @@ class UserFileService:
     ) -> UserFileMetadata | None:
 
         if await UserFileRepository.fetch_user_file_metadata_by_id(db, user_id):
-            raise HTTPException(status_code=400, detail="File already exists")
+            raise BadRequestException("File already exists please delete it first")
         
 
         file_create = UserFileMetadata(user_id = user.user_id,
@@ -54,7 +55,7 @@ class UserFileService:
     ):
         result = await UserFileRepository.delete_user_file_metadata(db, user_id)
         if result.rowcount == 0:
-            raise HTTPException(status_code=404, detail="File not found")
+            raise NotFoundException("File not found")
         
         await db.commit()
 

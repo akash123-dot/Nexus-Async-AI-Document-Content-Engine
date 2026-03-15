@@ -11,6 +11,7 @@ from app.schemas.schemas import BlueskyConnectRequest, PostRequest
 from app.services.bluesky_services import BlueskyServices
 from app.core.rate_limiter import rate_limiter
 from app.core.security import decrypt_password
+from app.services.exceptions import BlueskyAccountNotConnected
 
 router = APIRouter(prefix="/social", tags=["social"])
 
@@ -84,11 +85,7 @@ async def connect_bluesky(
     except HTTPException:
         raise
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Internal error: {str(e)}"
-        )
+
 
 
 @router.post("/post/bluesky")
@@ -188,9 +185,6 @@ async def disconnect_bluesky(
     result = await service.disconnect_bluesky(current_user.id)
 
     if not result:
-        raise HTTPException(
-            status_code=400,
-            detail="Failed to disconnect Bluesky account"
-        )
+        raise BlueskyAccountNotConnected("Bluesky account not connected.")
     
     return result

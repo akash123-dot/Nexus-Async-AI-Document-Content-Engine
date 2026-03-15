@@ -1,11 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.repositories.bluesky_repo import BlueskyRepository
 from app.core.security import encrypt_password
-
-
-
-
-
+from .exceptions import BlueskyAccountNotConnected
 
 
 
@@ -33,7 +29,7 @@ class BlueskyServices:
             app_password = encrypt_password(app_password)
         )
         if not account:
-            raise 
+            raise BlueskyAccountNotConnected()
         
         await self.db.commit()
         # await self.db.refresh(account)
@@ -65,5 +61,3 @@ class BlueskyServices:
         return {"message": "Bluesky account disconnected."}
 
 
-class BlueskyAccountNotConnected(Exception):
-    pass

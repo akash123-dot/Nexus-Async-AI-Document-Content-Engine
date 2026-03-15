@@ -18,6 +18,7 @@ from app.rag.retrive_answer.retrive_answers import generate_answer
 from app.rag.delete_vectordb import delete_user_database
 from app.config.settings import settings
 from app.config.redis import get_redis
+from app.services.exceptions import NotFoundException
 # import magic
 import uuid
 # import os
@@ -121,14 +122,11 @@ async def upload_file(
 
         redis.set(file_id, "processing", ex=600)
 
-        return responce
+        return {"id": file_id}
     
     except Exception as e:
         await supabase.storage.from_(BUCKET_NAME).remove([storage_path])
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        )
+        raise 
     
 
 @router.post("/upload/status", status_code=status.HTTP_201_CREATED)
@@ -142,10 +140,7 @@ async def upload_status(
 
     status = await redis.get(unique_file_name)
     if not status:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Not found or expired",
-        )
+        raise NotFoundException("Not found or expired")
     
     return status
 
@@ -169,7 +164,7 @@ async def retrieve_answer(
 
     # here we cache the file information
     if not file_info:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+        raise NotFoundException("File not found")
 
 
     user_id = current_user.id
@@ -202,21 +197,17 @@ async def delete_file_data(
     user_file_data = await UserFileService.fetch_user_file_metadata(db=db, user_id=current_user.id)
 
     if not user_file_data:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+        raise NotFoundException("File not found")
     
     user_id = current_user.id
     file_id = user_file_data.id
     storage_path = user_file_data.storage_path
 
-    try:
-        await delete_user_database(user_id=user_id, file_id=file_id)
-        await supabase.storage.from_(BUCKET_NAME).remove([storage_path])
-        await UserFileService.delete_user_file_metadata(db=db, user_id=user_id)
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e),
-        )
+    await delete_user_database(user_id=user_id, file_id=file_id)
+    await supabase.storage.from_(BUCKET_NAME).remove([storage_path])
+    await UserFileService.delete_user_file_metadata(db=db, user_id=user_id)
+
+
 
     return {"message": "File deleted successfully"}
