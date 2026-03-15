@@ -29,7 +29,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Async FastAPI CRUD",
+    title="Nexus — Async AI Document & Content Engine",
     lifespan=lifespan,
     default_response_class=ORJSONResponse,
 )
