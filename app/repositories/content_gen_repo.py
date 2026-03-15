@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.sql_models import ContentGenerationTask
 from sqlalchemy import select, or_, and_, update, delete
+from datetime import datetime
 from app.core.security import decode_cursor, encode_cursor
 from typing import Optional
 # from app.schemas.content_gen_schemas import ContentGenerationMetadata
@@ -102,51 +103,54 @@ class UserContentGenRepository:
 
 
 
-
-
-class ContentTaskRepository:
-
-    def __init__(self, db: AsyncSession):
-        self.db = db
-
-    async def get_tasks_page(
-        self,
+    @staticmethod
+    async def list_content_task(
+        db: AsyncSession,
         user_id: int,
+        # completed: bool | None,
         limit: int,
-        cursor: Optional[str] = None,
-    ) -> tuple[list[ContentGenerationTask], Optional[str]]:
-
-        query = (
-            select(ContentGenerationTask)
-            .where(ContentGenerationTask.user_id == user_id)
-            .order_by(
-                ContentGenerationTask.created_at.desc(),
-                ContentGenerationTask.id.desc(),
-            )
-            .limit(limit + 1) 
-        )
-
-        if cursor:
-            cursor_id, cursor_created_at = decode_cursor(cursor)
+        cursor: datetime | None,
+        cursor_id: int | None,
+    ):
         
-            query = query.where(
-                (ContentGenerationTask.created_at < cursor_created_at)
-                | and_(
-                    ContentGenerationTask.created_at == cursor_created_at,
-                    ContentGenerationTask.id < cursor_id,
+        stmt = select(ContentGenerationTask).where(ContentGenerationTask.user_id == user_id)
+        
+        if cursor and cursor_id:
+            cursor_naive = cursor.replace(tzinfo=None)
+
+            stmt = stmt.where(
+                or_(
+                    ContentGenerationTask.created_at < cursor_naive,
+                    and_(
+                        ContentGenerationTask.created_at == cursor_naive,
+                        ContentGenerationTask.id < cursor_id,
+                    ),
                 )
             )
 
-        result = await self.db.execute(query)
-        rows = result.scalars().all()
+        stmt = (
+            stmt.order_by(ContentGenerationTask.created_at.desc(), ContentGenerationTask.id.desc()).limit(limit + 1))
+        
+        result = await db.execute(stmt)
 
-       
-        has_next = len(rows) > limit
-        tasks = list(rows[:limit])
+        tasks = result.scalars().all()
 
-        next_cursor: Optional[str] = None
-        if has_next and tasks:
-            last = tasks[-1]
-            next_cursor = encode_cursor(last.id, last.created_at)
+        has_next = len(tasks) > limit
+        items = tasks[:limit]
 
-        return tasks, next_cursor
+        next_cursor = None
+        if has_next:
+            last = items[-1]
+            next_cursor = {
+                "cursor": last.created_at,
+                "cursor_id": last.id
+            }
+
+        return {
+            "items": items,
+            "next_cursor": next_cursor,
+            "has_next": has_next
+        }
+
+
+ 

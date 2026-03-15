@@ -8,11 +8,11 @@ from app.schemas.content_gen_schemas import( ContentGenerationConfig, TaskOut,
                                              ContentGenerationMetadata, TaskListResponse,
                                              SingleTaskResponse)
 
-from app.services.content_gen_service import ContentGenerationService, ContentTaskService
+from app.services.content_gen_service import ContentGenerationService
 # from fastapi.encoders import jsonable_encoder
 from app.messaging.publisher import publish_user_task
 from typing import Optional
-# from sqlalchemy import 
+from datetime import datetime
 import uuid
 # import json
 
@@ -31,11 +31,7 @@ async def generate_content(
         endpoint = request.url.path
     )
 
-    # if data:
-    #     payload = ContentGenerationConfig.model_validate(data).model_dump()
-    #     topic = payload.get("topic")
-    #     response = await intent_parser(payload, topic)
-    #     return response
+
 
     try:
         metadata = ContentGenerationMetadata(
@@ -88,7 +84,7 @@ async def view_content(
         endpoint = request.url.path
     )
 
-
+    # print("current user id:", current_user.id)
     try:
         service = await ContentGenerationService.view_content_task(db, unique_id, current_user.id)
 
@@ -162,30 +158,33 @@ async def delete_all_content(
 )
 
 
-@router.get("/list_content_tasks", response_model=TaskListResponse[TaskOut], status_code=status.HTTP_200_OK)
+@router.get("/list_content_tasks", status_code=status.HTTP_200_OK)
 async def list_content_tasks(
-    cursor: Optional[str] = Query(
-        default=None,
-    ),
-    limit: int = Query(
-        default=20,
-        ge=1,
-        le=100,
-        
-    ),
-    current_user: AuthUser = Depends(get_current_user),
+    request: Request,
+    limit: int = Query(20, ge=1, le=100),
+    cursor: datetime | None = Query(None),
+    cursor_id: int | None = Query(None),
     db: AsyncSession = Depends(get_async_session),
+    current_user: AuthUser = Depends(get_current_user),
 ):
-   
+    
+    await rate_limiter(
+        user_id = current_user.id,
+        endpoint = request.url.path
+    )
+    # print("current user id:", current_user.id)
     try:
-        service = ContentTaskService(db)
-        return await service.list_user_tasks(
-            user_id=current_user.id,
-            limit=limit,
-            cursor=cursor,
-        )
-    except ValueError as exc:
+        service = await ContentGenerationService.list_content_task(db, current_user.id, limit, cursor, cursor_id)
+
+        return service
+
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(exc),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
         )
+    
+
+
+
+        

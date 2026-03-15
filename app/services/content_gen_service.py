@@ -1,9 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.repositories.content_gen_repo import UserContentGenRepository, ContentTaskRepository
+from app.repositories.content_gen_repo import UserContentGenRepository
 from app.schemas.content_gen_schemas import ContentGenerationMetadata, TaskOut, TaskListResponse
 from app.models.sql_models import ContentGenerationTask
 from typing import Optional
 from fastapi import HTTPException
+from datetime import datetime
 # from repository import ContentTaskRepository
 
 
@@ -92,35 +93,16 @@ class ContentGenerationService:
 
         return
 
-class ContentTaskService:
 
-    def __init__(self, db: AsyncSession):
-        self.repo = ContentTaskRepository(db)
-
-    async def list_user_tasks(
-        self,
+    @staticmethod
+    async def list_content_task(
+        db: AsyncSession,
         user_id: int,
         limit: int,
-        cursor: Optional[str],
-    ) -> TaskListResponse:
-
-        if limit < 1 or limit > 100:
-            raise ValueError("limit must be between 1 and 100.")
-
-        tasks, next_cursor = await self.repo.get_tasks_page(
-            user_id=user_id,
-            limit=limit,
-            cursor=cursor,
-        )
-
-        return TaskListResponse(
-            data=[TaskOut.model_validate(t) for t in tasks],
-            next_cursor=next_cursor,
-            has_next=next_cursor is not None,
-        )
-
-
-
+        cursor: datetime | None,
+        cursor_id: int | None,
+    ):
+        return await UserContentGenRepository.list_content_task(db, user_id, limit, cursor, cursor_id)
 
 
 

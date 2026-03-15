@@ -149,3 +149,4 @@ async def logout(
 
     return {"message": "Logged out successfully"}
 
+
