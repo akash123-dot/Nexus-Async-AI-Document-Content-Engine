@@ -15,6 +15,9 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
 class FileMetadata(BaseModel):
    
     user_id: int

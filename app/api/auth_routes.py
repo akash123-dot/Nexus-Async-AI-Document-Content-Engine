@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.config.database import get_async_session
 from app.services.auth_service import AuthUserService, UserAlreadyExistsError
-from app.schemas.schemas import SignUpSchema, TokenResponse, LoginSchema
+from app.schemas.schemas import SignUpSchema, TokenResponse, LoginSchema, RefreshTokenRequest
 from app.core.jwt import decode_token, create_access_token
 from app.core.store_token_redis import get_refresh_token, delete_refresh_token
 from app.services.exceptions import InvalidCredentialsException
@@ -63,17 +63,24 @@ async def login(
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(
-    payload: str = Body(...),
+    payload: RefreshTokenRequest,
     # db: AsyncSession = Depends(get_async_session),
 ):
     try:
-        decoded_token = decode_token(payload)
+        decoded_token = decode_token(payload.refresh_token)
         
     except Exception as e:
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired token",
         )
+
+    if not decoded_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token",
+        )
+
     
     if decoded_token["type"] != "refresh":
         raise HTTPException(
@@ -95,7 +102,7 @@ async def refresh_token(
     new_access_token = create_access_token(user_id)
     return {
         "access_token": new_access_token,
-        "refresh_token": payload,
+        "refresh_token": payload.refresh_token,
         "token_type": "bearer",
     }
 
@@ -103,15 +110,22 @@ async def refresh_token(
 
 @router.post("/logout")
 async def logout(
-    payload:str = Body(...),
+    payload: RefreshTokenRequest,
 ):
     try:
-        decoded_token = decode_token(payload)
+        decoded_token = decode_token(payload.refresh_token)
     except Exception as e:
         raise HTTPException(
             status_code=401,
             detail="Invalid or expired token",
         )
+
+    if not decoded_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token",
+        )
+
     
     if decoded_token["type"] != "refresh":
         raise HTTPException(
