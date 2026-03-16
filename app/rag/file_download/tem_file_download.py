@@ -17,7 +17,7 @@ PROCESSOR_MAP = {
     ".docx": (read_doc, choose_chunk_strategy, chunks_doc_data),
     ".doc": (read_doc,  choose_chunk_strategy, chunks_doc_data),
     ".txt": (read_text, choose_chunk_strategy, chunks_text_data),
-    # ".json": (read_json, chunks_json_data) # Add when ready
+
     }
 
 BUCKET_NAME = settings.BUCKET_NAME

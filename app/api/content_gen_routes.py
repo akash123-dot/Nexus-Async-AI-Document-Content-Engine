@@ -107,7 +107,7 @@ async def delete_content(
 
     service = await ContentGenerationService.delete_content_task(db, unique_id, current_user.id)
 
-    return service
+    return {"message": "Content deleted successfully"}
 
 
 
@@ -130,7 +130,7 @@ async def delete_all_content(
     await ContentGenerationService.delete_all_content_tasks(db, current_user.id)
 
 
-    return {"message": "Content deleted successfully"}
+    return {"message": "All Content deleted successfully"}
 
   
 

@@ -1,7 +1,7 @@
 services:
 
   api:
-    build: .
+    image: akash178/ai-document-content-engine:latest
     container_name: fastapi_app
     ports:
       - "8000:8000"

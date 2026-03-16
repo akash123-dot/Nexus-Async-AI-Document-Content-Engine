@@ -120,7 +120,7 @@ async def upload_file(
 
         await publish_user_task(user_id=current_user.id, task_type="file_processing", payload=payload)
 
-        redis.set(file_id, "processing", ex=600)
+        await redis.set(file_id, "processing", ex=600)
 
         return {"id": file_id}
     
@@ -138,11 +138,11 @@ async def upload_status(
 
     redis = await get_redis()
 
-    status = await redis.get(unique_file_name)
-    if not status:
+    file_status  = await redis.get(unique_file_name)
+    if not file_status :
         raise NotFoundException("Not found or expired")
     
-    return status
+    return file_status 
 
 
 

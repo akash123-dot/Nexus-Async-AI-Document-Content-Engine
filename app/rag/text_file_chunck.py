@@ -51,13 +51,13 @@ def choose_chunk_strategy(stats):
 
 
 
-def read_text(directory):
+async def read_text(directory):
     file_loder = TextLoader(directory, encoding="utf-8")
-    documents = file_loder.load()
+    documents = await file_loder.aload()
     stats = analyze_text(documents)
     return documents, stats
 
-def chunks_text_data(docs, user_id, file_id, file_name, chunk_size=256, chunk_overlap=50):
+async def chunks_text_data(docs, user_id, file_id, file_name, chunk_size=256, chunk_overlap=50):
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         encoding_name="cl100k_base",
         chunk_size=chunk_size,
