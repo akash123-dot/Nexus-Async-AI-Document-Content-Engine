@@ -39,7 +39,7 @@ async def retrive_answer(question, user_id, file_id, k=8) -> dict:
                                                                                  )
                                                                                 
 
-    valid_score = 0.2
+    valid_score = 0.70
 
     result = [doc for doc, score in result_with_score if score > valid_score]
     

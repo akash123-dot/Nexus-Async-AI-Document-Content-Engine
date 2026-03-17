@@ -30,6 +30,11 @@ import uuid
 
 router = APIRouter(prefix="/files", tags=["Files"])
 
+
+FILE_ID_CACHE_TTL = 1000
+def file_id_cache_key(user_id: str) -> str:
+    return f"retrieve_answer_user.{user_id}"
+
 ALLOWED_MIME_TYPES = {
     "application/pdf",
     "text/plain",
@@ -129,7 +134,7 @@ async def upload_file(
         raise 
     
 
-@router.post("/upload/status", status_code=status.HTTP_201_CREATED)
+@router.post("/upload/status", status_code=status.HTTP_200_OK)
 async def upload_status(
     unique_file_name: str = Body(...),
     # db: AsyncSession = Depends(get_async_session),
@@ -155,26 +160,35 @@ async def retrieve_answer(
     current_user: AuthUser = Depends(get_current_user),
     data: RetrieveAnswerSchema = Body(...),
 ):
+
+    redis = await get_redis()
+
     await rate_limiter(
         user_id = current_user.id,
         endpoint = request.url.path
     )
 
-    file_info = await UserFileService.fetch_user_file_metadata_by_id(db=db, user_id=current_user.id)
-
-    # here we cache the file information
-    if not file_info:
-        raise NotFoundException("File not found")
-
-
     user_id = current_user.id
-    file_id = file_info
-    # file_name = file_info.file_name
-    question = data.question
+    cache_key = file_id_cache_key(user_id)
+    file_id = await redis.get(cache_key)
 
-    answer = await generate_answer(question=question,
+    if not file_id:
+        file_info = await UserFileService.fetch_user_file_metadata_by_id(db=db, user_id=current_user.id)
+
+        
+        if not file_info:
+            raise NotFoundException("File not found")
+        
+        file_id = str(file_info)
+
+        await redis.set(cache_key, file_id, ex=FILE_ID_CACHE_TTL)
+
+
+   
+
+    answer = await generate_answer(question=data.question,
                                   user_id=user_id,
-                                  file_id=file_id,
+                                  file_id=int(file_id),
                                   )
 
     return answer
@@ -189,6 +203,9 @@ async def delete_file_data(
     current_user: AuthUser = Depends(get_current_user),
     supabase: AsyncClient = Depends(get_supabase_client),
 ):
+    
+    redis = await get_redis()
+
     await rate_limiter(
         user_id = current_user.id,
         endpoint = request.url.path
@@ -208,6 +225,6 @@ async def delete_file_data(
     await supabase.storage.from_(BUCKET_NAME).remove([storage_path])
     await UserFileService.delete_user_file_metadata(db=db, user_id=user_id)
 
-
+    await redis.delete(file_id_cache_key(user_id))
 
     return {"message": "File deleted successfully"}
