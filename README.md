@@ -133,7 +133,32 @@ When a user deletes their file, the system performs a **full cascade delete** in
 | 5 | Remove file cache and processing status from Redis |
 | 6 | Return success response |
 
-![Delete Flow](<img width="552" height="2424" alt="dekete_file" src="https://github.com/user-attachments/assets/481e7717-d7de-470c-b552-eab1e18a29a5" />)
+![Delete Flow](
+```mermaid
+graph TD
+
+User((User / Client)) -->|DELETE /delete/delete_file_data| API[FastAPI Delete Endpoint]
+
+API --> RateLimit[Rate Limit - Redis]
+
+RateLimit --> FetchMeta[(Fetch File Metadata from PostgreSQL)]
+
+FetchMeta --> PineconeDelete[Delete Vectors from Pinecone<br/>namespace + file_id]
+
+PineconeDelete --> SupabaseDelete[Delete File from Supabase Storage]
+
+SupabaseDelete --> DBDelete[(Delete Metadata from PostgreSQL)]
+
+DBDelete --> RedisDelete[Remove File Cache / Status from Redis]
+
+RedisDelete --> Response[Return Success Response]
+
+style API fill:#0ea5e9,color:#fff
+style PineconeDelete fill:#8b5cf6,color:#fff
+style SupabaseDelete fill:#10b981,color:#fff
+
+```
+)
 
 ---
 
