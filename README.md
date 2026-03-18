@@ -97,7 +97,7 @@ A user can have **one active file at a time**. If a file already exists, they mu
    - RabbitMQ **ACK** sent
 6. **On failure:** Retries up to **3 times** → moves to **Dead Letter Queue (DLQ)** → Redis status → `failed` → triggers monitoring/alert
 
-![Upload & RAG Worker Flow](./diagrams/upload_rag_flow.png)
+![Upload & RAG Worker Flow](<img width="2647" height="7190" alt="RAG_pipeline" src="https://github.com/user-attachments/assets/e190fb3b-d13e-46e5-afaa-1ced511a118b" />)
 
 ---
 
@@ -118,7 +118,7 @@ A user can have **one active file at a time**. If a file already exists, they mu
 7. **LLM Generation** — Gemini generates the answer
 8. **Response returned** to user
 
-![Retrieval Flow](./diagrams/retrieval_flow.png)
+![Retrieval Flow](<img width="628" height="3502" alt="retreive_answer" src="https://github.com/user-attachments/assets/f0251d6f-efe6-4f5c-83c5-610584cceb94" />)
 
 #### Delete Flow
 
@@ -133,7 +133,7 @@ When a user deletes their file, the system performs a **full cascade delete** in
 | 5 | Remove file cache and processing status from Redis |
 | 6 | Return success response |
 
-![Delete Flow](./diagrams/delete_flow.png)
+![Delete Flow](<img width="552" height="2424" alt="dekete_file" src="https://github.com/user-attachments/assets/481e7717-d7de-470c-b552-eab1e18a29a5" />)
 
 ---
 
@@ -188,7 +188,7 @@ class ContentGenerationConfig(BaseModel):
 
 ### Content Generation Pipeline
 
-![Content Generation Flow](./diagrams/content_gen_flow.png)
+![Content Generation Flow](<img width="1656" height="6349" alt="content_generation" src="https://github.com/user-attachments/assets/eb4f00cd-cc17-4bca-8b20-6c9ddf5a48fc" />)
 
 **Step-by-step:**
 
