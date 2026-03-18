@@ -1,6 +1,12 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
+import re
 
+def clean_text(text: str) -> str:
+    text = re.sub(r'\n{3,}', '\n\n', text)   
+    text = re.sub(r'[ \t]+', ' ', text)       
+    text = re.sub(r' *\n *', '\n', text)      
+    return text.strip()
 
 
 
@@ -13,51 +19,50 @@ def analyze_text(docs):
         total_chars += len(text)
         total_lines += text.count("\n")
 
-    pages = len(docs)
-
-   
-
+    
     return {
-    "pages": pages,
-    "total_chars": total_chars,
-    "avg_chars_per_page": total_chars / pages if pages > 0 else 0,
-    "avg_lines_per_page": total_lines / pages if pages > 0 else 0,
-    "avg_chars_per_line": total_chars / total_lines if total_lines > 0 else total_chars
+        "total_chars": total_chars,
+        "total_lines": total_lines,
+        "avg_chars_per_line": total_chars / total_lines if total_lines > 0 else total_chars
     }
 
 
 
+# CHARS_PER_TOKEN = 4 
+
 def choose_chunk_strategy(stats):
+    avg_chars_per_line = stats.get("avg_chars_per_line", 0)
 
-    avg_chars = stats.get("avg_chars_per_page", 0)
-    avg_lines = stats.get("avg_lines_per_page", 0)
-
-    if avg_chars == 0:
+    if avg_chars_per_line == 0:
         return 256, 50
-
-    avg_chars_per_line = stats.get("avg_chars_per_line") or (
-        avg_chars / avg_lines if avg_lines > 0 else avg_chars)
-
 
 
     if avg_chars_per_line < 40:
-        return 200, 40   
+        return 256, 50    
+
+
     elif avg_chars_per_line < 80:
-        return 300, 60   
+        return 384, 75   
+
+    
     else:
-        return 400, 80   
+        return 512, 100  
 
 
 
 
 
 async def read_text(directory):
-    file_loder = TextLoader(directory, encoding="utf-8")
-    documents = await file_loder.aload()
+    file_loader = TextLoader(directory, encoding="utf-8")
+    documents = await file_loader.aload()
+
+    for doc in documents:
+        doc.page_content = clean_text(doc.page_content)
+
     stats = analyze_text(documents)
     return documents, stats
 
-async def chunks_text_data(docs, user_id, file_id, file_name, chunk_size=256, chunk_overlap=50):
+async def chunks_text_data(docs, user_id, file_id, file_name, chunk_size, chunk_overlap):
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         encoding_name="cl100k_base",
         chunk_size=chunk_size,

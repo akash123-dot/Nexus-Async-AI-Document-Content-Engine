@@ -54,13 +54,10 @@ def create_refresh_token(
     return encode_token, jti
 
 
-def decode_token(token: str) -> dict | None:
+def decode_token(token: str) -> dict:
     
-    try:
-        return jwt.decode(
-            token,
-            settings.JWT_SECRET_KEY,
-            algorithms=settings.JWT_ALGORITHM,  
-        )
-    except JWTError:
-        return None
+    return jwt.decode(
+        token,
+        settings.JWT_SECRET_KEY,
+        algorithms=[settings.JWT_ALGORITHM],  
+    )

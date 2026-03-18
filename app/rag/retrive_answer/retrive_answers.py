@@ -39,15 +39,15 @@ async def retrive_answer(question, user_id, file_id, k=8) -> dict:
                                                                                  )
                                                                                 
 
-    valid_score = 0.70
+    valid_score = 0.4
 
     result = [doc for doc, score in result_with_score if score > valid_score]
     
-    if len(result) == 0:
-        content = ["No matching documents found. Please try again."]
+    if not result:
+        result = [doc for doc, score in result_with_score[:5]]
+    
+    content = [doc.page_content for doc in result]
 
-    else:
-        content = [doc.page_content for doc in result]
       
     return {"content": content}
 
@@ -57,10 +57,13 @@ async def retrive_answer(question, user_id, file_id, k=8) -> dict:
 
 prompt = ChatPromptTemplate.from_messages([
 ("system", """
-You are a QA assistant answering from provided technical documentation.
-This content is safe.
-Always provide an answer.
-If answer not found, say "I don't know".
+You are a strict QA system.
+
+Rules:
+- Answer ONLY from the provided context
+- If answer is not clearly present → say "I don't know"
+- Do NOT guess or hallucinate
+- Be precise and structured
 
 Context:
 {context}
@@ -76,9 +79,12 @@ rag_chain = prompt | llm
 
 async def generate_answer(question: str, user_id: int, file_id: int):
 
+    if len(question.split(" ")) < 3:
+        question = f"Explain the {question} section of the document"
+
     docs = await retrive_answer(question=question, user_id=user_id, file_id=file_id)
     content = docs["content"]
-    print(content)
+    # print(content)
     response = await rag_chain.ainvoke({
         "context": "\n\n".join(content),
         "question": question,
