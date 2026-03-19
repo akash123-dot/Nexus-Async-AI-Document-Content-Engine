@@ -97,8 +97,77 @@ A user can have **one active file at a time**. If a file already exists, they mu
    - RabbitMQ **ACK** sent
 6. **On failure:** Retries up to **3 times** → moves to **Dead Letter Queue (DLQ)** → Redis status → `failed` → triggers monitoring/alert
 
-![Upload & RAG Worker Flow](./diagrams/upload_rag_flow.png)
+![Upload & RAG Worker Flow]
+```mermaid
+graph TD
 
+User((User / Client)) -->|POST /upload| API[FastAPI Upload Endpoint]
+
+subgraph File_Validation
+    API --> A1[Check File Type txt pdf docx doc]
+    A1 --> A2[Check Max File Size]
+    A2 --> A3[Rename File]
+end
+
+A3 --> B1[Upload File to Supabase Storage]
+
+B1 --> DB[(Save Metadata in PostgreSQL)]
+B1 --> ErrCheck{Route Error?}
+
+DB --> Exists{Previous File Exists?}
+
+Exists -->|Yes| DeleteOld[Delete Old File]
+Exists -->|No| Continue1[Continue]
+
+DeleteOld --> Continue1
+
+ErrCheck -->|Yes| DeleteSupabase[Delete File from Supabase]
+ErrCheck -->|No| Continue2[Continue]
+
+DeleteSupabase --> ReturnError[Return Error]
+Continue2 --> Continue1
+
+Continue1 --> FileID[Generate File ID]
+FileID --> ReturnClient[Return file_id to Client]
+
+FileID --> Publish[Publish Task to RabbitMQ]
+
+subgraph Async_RAG_Worker
+    Publish --> Worker[Background Worker]
+
+    Worker --> RedisProcessing[Redis Status processing]
+    RedisProcessing --> SupabaseClient[Open Async Supabase Client]
+    SupabaseClient --> Download[Download File]
+
+    Download --> Ext{File Extension}
+
+    Ext -->|pdf| PDF[PDF Text Extractor]
+    Ext -->|docx| DOCX[DOCX Text Extractor]
+    Ext -->|txt| TXT[TXT Reader]
+    Ext -->|doc| DOC[DOC Reader]
+
+    PDF --> Analyze[Analyze Text Structure]
+    DOCX --> Analyze
+    TXT --> Analyze
+    DOC --> Analyze
+
+    Analyze --> Chunk[Choose Chunk Strategy]
+    Chunk --> Split[RecursiveCharacterTextSplitter]
+    Split --> Meta[Attach Metadata source doc_id file_name page]
+    Meta --> Embed[Generate Embeddings GoogleGenerativeAI]
+    Embed --> Pinecone[Store Vectors in Pinecone]
+
+    Pinecone --> RedisDone[Update Redis Status completed]
+    RedisDone --> Ack[RabbitMQ ACK]
+
+    Pinecone --> Error{Error?}
+    Error -->|Yes| Retry{Retry < 3}
+    Retry -->|Yes| Worker
+    Retry -->|No| RedisFail[Update Redis Status failed]
+    RedisFail --> DLQ[Dead Letter Queue]
+    DLQ --> Monitor[Monitoring / Alert]
+end
+```
 ---
 
 #### Retrieval Flow
@@ -118,7 +187,51 @@ A user can have **one active file at a time**. If a file already exists, they mu
 7. **LLM Generation** — Gemini generates the answer
 8. **Response returned** to user
 
-![Retrieval Flow](./diagrams/retrieval_flow.png)
+![Retrieval Flow]
+```mermaid
+graph TD
+
+User((User / Client)) -->|POST /retrieve_answer| API[FastAPI Retrieval Endpoint]
+
+API --> Rate[Rate Limit - Redis]
+
+Rate --> Cache{Metadata in Redis Cache?}
+
+Cache -->|Yes| RedisFetch[Fetch Metadata from Redis]
+Cache -->|No| PG[(Fetch Metadata from PostgreSQL)]
+
+PG --> UpdateCache[Update Redis Cache]
+UpdateCache --> RedisFetch
+
+RedisFetch --> Embed[Generate Query Embedding<br/>- Gemini Embedding 001]
+
+Embed --> Search[Vector Search Pinecone<br/>namespace + file_id]
+
+Search --> TopK[Retrieve Top 8 Chunks]
+TopK --> Filter[Filter Chunks Score >= 0.70]
+Filter --> Prompt[Build Prompt with Context<br/>+ User Question]
+
+Prompt --> LLM[Generate Answer with LLM]
+LLM --> Return[Return Answer to User]
+
+%% ================= STYLING =================
+
+style API fill:#2b9ed8,stroke:#ffffff,color:#ffffff
+style Search fill:#8a63d2,stroke:#ffffff,color:#ffffff
+style LLM fill:#1fb57a,stroke:#ffffff,color:#ffffff
+
+style User fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Rate fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Cache fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style RedisFetch fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style PG fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style UpdateCache fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Embed fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style TopK fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Filter fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Prompt fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Return fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+```
 
 #### Delete Flow
 
@@ -133,7 +246,32 @@ When a user deletes their file, the system performs a **full cascade delete** in
 | 5 | Remove file cache and processing status from Redis |
 | 6 | Return success response |
 
-![Delete Flow](./diagrams/delete_flow.png)
+![Delete Flow](
+```mermaid
+graph TD
+
+User((User / Client)) -->|DELETE /delete/delete_file_data| API[FastAPI Delete Endpoint]
+
+API --> RateLimit[Rate Limit - Redis]
+
+RateLimit --> FetchMeta[(Fetch File Metadata from PostgreSQL)]
+
+FetchMeta --> PineconeDelete[Delete Vectors from Pinecone<br/>namespace + file_id]
+
+PineconeDelete --> SupabaseDelete[Delete File from Supabase Storage]
+
+SupabaseDelete --> DBDelete[(Delete Metadata from PostgreSQL)]
+
+DBDelete --> RedisDelete[Remove File Cache / Status from Redis]
+
+RedisDelete --> Response[Return Success Response]
+
+style API fill:#0ea5e9,color:#fff
+style PineconeDelete fill:#8b5cf6,color:#fff
+style SupabaseDelete fill:#10b981,color:#fff
+
+```
+)
 
 ---
 
@@ -188,7 +326,103 @@ class ContentGenerationConfig(BaseModel):
 
 ### Content Generation Pipeline
 
-![Content Generation Flow](./diagrams/content_gen_flow.png)
+![Content Generation Flow]
+```mermaid
+graph TD
+
+User((User / Client))
+
+User -->|POST /generate-content| API[FastAPI Entry Point]
+User -->|/generate_content/view_content| StatusAPI[Task Status Endpoint]
+
+StatusAPI --> StatusDB[(PostgreSQL Read Job Status)]
+
+%% ================= REQUEST VALIDATION =================
+subgraph Request_Validation_and_Security
+    API --> Pydantic[Pydantic Schema Validation]
+    Pydantic --> Auth[Auth and Rate Limit - Redis]
+    Auth --> TaskID[Generate Task ID]
+    TaskID --> SaveStatus[(PostgreSQL Save Status queued)]
+end
+
+SaveStatus --> ReturnTask[Return task_id to Client]
+
+%% ================= ASYNC WORKER =================
+SaveStatus --> Publish[Publish Task]
+
+subgraph Async_Worker_Pipeline
+    Publish --> Queue[RabbitMQ Queue]
+    Queue --> Worker[Background Worker]
+    Worker --> DBSession[Open Async DB Session]
+
+    subgraph AI_Processing_Pipeline
+        DBSession --> Processing[Update Status processing]
+        Processing --> Safety[Safety and Domain Filtering]
+        Safety --> Temp[Temperature Calculation]
+        Temp --> Strategy[Strategy Planning]
+        Strategy --> Prompt[Prompt Construction]
+
+        Prompt --> Decision{Web Search Enabled}
+
+        Decision -->|True| Web[External Web Search]
+        Web --> Summarize[Summarize Search Results]
+        Summarize --> FinalLLM[Final Content Generation LLM]
+
+        Decision -->|False| FinalLLM
+    end
+
+    FinalLLM --> SaveFinal[(Save Content and Status completed)]
+    SaveFinal --> Ack[RabbitMQ ACK]
+
+    SaveFinal --> Error{Error}
+    Error -->|Yes| Retry{Retry less than 3}
+    Retry -->|Yes| Worker
+    Retry -->|No| DLQ[Dead Letter Queue]
+    DLQ --> Alert[Monitoring / Alert]
+end
+
+%% ================= STYLING =================
+
+%% Blue (Entry)
+style API fill:#2b9ed8,stroke:#ffffff,color:#ffffff
+
+%% Orange (Queue)
+style Queue fill:#f39c12,stroke:#ffffff,color:#000000
+
+%% Green (Worker)
+style Worker fill:#1fb57a,stroke:#ffffff,color:#ffffff
+
+%% Purple (Final LLM)
+style FinalLLM fill:#8a63d2,stroke:#ffffff,color:#ffffff
+
+%% Red (DLQ)
+style DLQ fill:#e74c3c,stroke:#ffffff,color:#ffffff
+
+%% Dark theme nodes
+style User fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style StatusAPI fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style StatusDB fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Pydantic fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Auth fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style TaskID fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style SaveStatus fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style ReturnTask fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Publish fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style DBSession fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Processing fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Safety fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Temp fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Strategy fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Prompt fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Decision fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Web fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Summarize fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style SaveFinal fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Ack fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Error fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Retry fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+style Alert fill:#1e1e1e,stroke:#cccccc,color:#ffffff
+```
 
 **Step-by-step:**
 
