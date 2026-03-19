@@ -2,9 +2,18 @@ import tempfile
 import os
 from supabase import create_async_client, AsyncClient
 from app.config.settings import settings
-from app.rag.pdf_chunck import read_pdf, chunks_pdf_data, choose_chunk_strategy
-from app.rag.officeword_chunk import read_doc, chunks_doc_data, choose_chunk_strategy
-from app.rag.text_file_chunck import read_text, chunks_text_data, choose_chunk_strategy
+from app.rag.pdf_chunck import (
+    read_pdf, chunks_pdf_data,
+    choose_chunk_strategy as pdf_strategy
+)
+from app.rag.officeword_chunk import (
+    read_doc, chunks_doc_data,
+    choose_chunk_strategy as doc_strategy
+)
+from app.rag.text_file_chunck import (
+    read_text, chunks_text_data,
+    choose_chunk_strategy as txt_strategy
+)
 from app.rag.save_vectordb import save_to_pinecone
 # from dotenv import load_dotenv
 
@@ -13,12 +22,11 @@ from app.rag.save_vectordb import save_to_pinecone
 
 
 PROCESSOR_MAP = {
-    ".pdf": (read_pdf, choose_chunk_strategy, chunks_pdf_data),
-    ".docx": (read_doc, choose_chunk_strategy, chunks_doc_data),
-    ".doc": (read_doc,  choose_chunk_strategy, chunks_doc_data),
-    ".txt": (read_text, choose_chunk_strategy, chunks_text_data),
-
-    }
+    ".pdf":  (read_pdf,  pdf_strategy, chunks_pdf_data),
+    ".docx": (read_doc,  doc_strategy, chunks_doc_data),
+    ".doc":  (read_doc,  doc_strategy, chunks_doc_data),
+    ".txt":  (read_text, txt_strategy, chunks_text_data),
+}
 
 BUCKET_NAME = settings.BUCKET_NAME
 

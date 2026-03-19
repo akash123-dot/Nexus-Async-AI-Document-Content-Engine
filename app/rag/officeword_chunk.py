@@ -6,7 +6,7 @@ import re
 def clean_docx_text(text: str) -> str:
     text = re.sub(r'\n{3,}', '\n\n', text)
     text = re.sub(r'[ \t]+', ' ', text)
-    text = re.sub(r' *\n *', '\n', text)
+    # text = re.sub(r' *\n *', '\n', text)
     return text.strip()
 
 
@@ -65,9 +65,10 @@ async def chunks_doc_data(docs, user_id, file_id, file_name, chunk_size, chunk_o
     chunks = text_splitter.split_documents(docs)
     chunks = [c for c in chunks if len(c.page_content.strip()) > 50]
 
-    for chunk in chunks:
+    for i, chunk in enumerate(chunks):
         chunk.metadata["source"] = user_id
         chunk.metadata["doc_id"] = file_id
         chunk.metadata["file_name"] = file_name
+        chunk.metadata["page"] = i 
 
     return chunks

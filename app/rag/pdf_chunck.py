@@ -12,7 +12,7 @@ import re
 def clean_pdf_text(text: str) -> str:
     text = re.sub(r'\n{3,}', '\n\n', text)  
     text = re.sub(r'[ \t]+', ' ', text)       
-    text = re.sub(r' *\n *', '\n', text)     
+    # text = re.sub(r' *\n *', '\n', text)     
     return text.strip()
 
 
@@ -90,30 +90,58 @@ async def read_pdf(directory):
     return documents, stats
 
 
-async def chunks_pdf_data(docs,user_id, file_id, file_name, chunk_size, chunk_overlap):
+# async def chunks_pdf_data(docs,user_id, file_id, file_name, chunk_size, chunk_overlap):
+#     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
+#         encoding_name="cl100k_base",
+#         chunk_size=chunk_size,
+#         chunk_overlap=chunk_overlap,
+#         separators=[
+#             "\n\n",
+#             ". ",
+#             "? ",
+#             "! ",
+#             " ",
+#             ""
+#         ]
+#     )
+#     chunks = text_splitter.split_documents(docs)
+#     chunks = [c for c in chunks if len(c.page_content.strip()) > 20]
+
+#     for chunk in chunks:
+#         chunk.metadata["source"] = user_id
+#         chunk.metadata["doc_id"] = file_id
+#         chunk.metadata["file_name"] = file_name
+#         chunk.metadata["page"] = chunk.metadata.get("page")
+
+#     return chunks
+
+
+
+async def chunks_pdf_data(docs, user_id, file_id, file_name, chunk_size, chunk_overlap):
+
+    page_boundaries = []
+    full_text = ""
+    for doc in docs:
+        page_num = doc.metadata.get("page", 0) + 1
+        page_boundaries.append((len(full_text), page_num)) 
+        full_text += doc.page_content + "\n\n"
+
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         encoding_name="cl100k_base",
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
-        separators=[
-            "\n\n",
-            ". ",
-            "? ",
-            "! ",
-            " ",
-            ""
-        ]
+        separators=["\n\n", "\n", ". ", "? ", "! ", " ", ""]
     )
-    chunks = text_splitter.split_documents(docs)
-    chunks = [c for c in chunks if len(c.page_content.strip()) > 50]
 
-    for chunk in chunks:
-        chunk.metadata["source"] = user_id
-        chunk.metadata["doc_id"] = file_id
-        chunk.metadata["file_name"] = file_name
-        chunk.metadata["page"] = chunk.metadata.get("page")
+    chunks = text_splitter.create_documents([full_text])
+    chunks = [c for c in chunks if len(c.page_content.strip()) > 20]
+
+    for i, chunk in enumerate(chunks):
+        chunk.metadata.update({
+            "source": user_id,
+            "doc_id": file_id,
+            "file_name": file_name,
+            "chunk_index": i
+        })
 
     return chunks
-
-
-

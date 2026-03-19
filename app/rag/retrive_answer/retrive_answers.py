@@ -26,27 +26,40 @@ embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", a
 pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(PINECONE_INDEX)
 
-async def retrive_answer(question, user_id, file_id, k=8) -> dict:
+async def retrive_answer(question, user_id, file_id) -> dict:
     
     vector_store = PineconeVectorStore(embedding=embeddings,
                                        index=index,
                                        namespace=f"user_{user_id}",
                                        )
     
-    result_with_score = await vector_store.asimilarity_search_with_score(query=question,
-                                                                         k=k,
+
+    comparison_keywords = ["difference", "compare", "vs", "versus", "contrast"]
+    use_mmr = any(kw in question.lower() for kw in comparison_keywords)
+
+    if use_mmr:
+        result = await vector_store.amax_marginal_relevance_search(
+            query=question, k=10, fetch_k=30, filter={"doc_id": file_id}
+        )
+    else:
+        result_with_score = await vector_store.asimilarity_search_with_score(query=question,
+                                                                         k=10,
                                                                          filter={"doc_id": file_id,}
-                                                                                 )
-                                                                                
+                                                                                 )                                                                    
+        valid_score = 0.4
 
-    valid_score = 0.4
+        result = [doc for doc, score in result_with_score if score >= valid_score]
+        
+        if not result:
+            result = [doc for doc, score in result_with_score[:5]]
 
-    result = [doc for doc, score in result_with_score if score > valid_score]
+    content = []
+    for doc in result:
+        file_name = doc.metadata.get('file_name', '')
+        page = doc.metadata.get('page')
+        page_info = f"[Source: {file_name} | Page: {page}]" if page is not None else f"[Source: {file_name}]"
+        content.append(f"{page_info}\n{doc.page_content}")
     
-    if not result:
-        result = [doc for doc, score in result_with_score[:5]]
-    
-    content = [doc.page_content for doc in result]
 
       
     return {"content": content}
@@ -57,20 +70,20 @@ async def retrive_answer(question, user_id, file_id, k=8) -> dict:
 
 prompt = ChatPromptTemplate.from_messages([
 ("system", """
-You are a strict QA system.
+You are a strict QA assistant.
 
 Rules:
 - Answer ONLY from the provided context
-- If answer is not clearly present → say "I don't know"
-- Do NOT guess or hallucinate
+- If the context contains enough info to make a logical inference, provide it
+- If the answer is not present → say "I cannot find this in the provided document"
 - Be precise and structured
+- If source/page info is available in context, reference it in your answer
 
 Context:
 {context}
 """),
 ("human", "{question}")
 ])
-
 
 rag_chain = prompt | llm
 
@@ -93,4 +106,6 @@ async def generate_answer(question: str, user_id: int, file_id: int):
     # print(response.additional_kwargs)
 
     return response.content
+
+
 
