@@ -71,11 +71,10 @@ A user can have **one active file at a time**. If a file already exists, they mu
 
 #### Upload & Processing Flow
 
-> **📹 GIF Placeholder — RAG Pipeline: File Upload → Supabase Storage → RabbitMQ → Chunking → Embedding → Pinecone**
->
-> ```
-> [ -- This area: show GIF of RAG pipeline — file upload, processing status polling, vectors saved in Pinecone -- ]
-> ```
+> **📹 GIF  — RAG Pipeline: File Upload → Supabase Storage → RabbitMQ → Chunking → Embedding → Pinecone**
+<img width="1042" height="566" alt="Image" src="https://github.com/user-attachments/assets/27894a7a-226c-475f-ab59-b8b4d6dafdac" />
+
+
 
 **Step-by-step:**
 
