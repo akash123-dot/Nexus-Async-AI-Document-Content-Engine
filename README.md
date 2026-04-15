@@ -171,11 +171,8 @@ end
 
 #### Retrieval Flow
 
-> **📹 GIF Placeholder — Retrieval + Delete: Ask question → Redis cache check → Pinecone vector search → LLM answer / Delete flow**
->
-> ```
-> [ -- This area: show GIF of retrieval (question → answer) and delete (file removal cascade) -- ]
-> ```
+> **📹 GIF — Retrieval + Delete: Ask question → Redis cache check → Pinecone vector search → LLM answer / Delete flow**
+<img width="972" height="547" alt="Image" src="https://github.com/user-attachments/assets/356722fc-6165-44e6-9be0-7f62bedcba58" />
 
 1. **Rate Limit Check** — Redis-based rate limiting on the endpoint
 2. **Metadata Cache** — Check Redis for cached file metadata. If miss → fetch from PostgreSQL → update Redis cache
@@ -453,6 +450,8 @@ Once content is generated, users have full management control:
 
 Every query on the content table is scoped by user_id and hits a targeted index — the database never scans rows it doesn't need.
 
+> **📹 GIF — Content Gen Workflow**
+<img width="1152" height="648" alt="Image" src="https://github.com/user-attachments/assets/7803ac93-1b04-4a7e-923d-764032feae0b" />
 ---
 
 ## Bluesky Social Publisher
