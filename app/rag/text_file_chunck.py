@@ -1,6 +1,7 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader
 import re
+import asyncio
 
 def clean_text(text: str) -> str:
     text = re.sub(r'\n{3,}', '\n\n', text)   
@@ -56,13 +57,17 @@ async def read_text(directory):
     file_loader = TextLoader(directory, encoding="utf-8")
     documents = await file_loader.aload()
 
-    for doc in documents:
-        doc.page_content = clean_text(doc.page_content)
+    def process_docs_sy():
 
-    stats = analyze_text(documents)
+        for doc in documents:
+            doc.page_content = clean_text(doc.page_content)
+
+        return analyze_text(documents)
+
+    stats = await asyncio.to_thread(process_docs_sy)
     return documents, stats
 
-async def chunks_text_data(docs, user_id, file_id, file_name, chunk_size, chunk_overlap):
+def chunks_text(docs, user_id, file_id, file_name, chunk_size, chunk_overlap):
     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
         encoding_name="cl100k_base",
         chunk_size=chunk_size,
@@ -88,4 +93,10 @@ async def chunks_text_data(docs, user_id, file_id, file_name, chunk_size, chunk_
         chunk.metadata["file_name"] = file_name
         
 
+    return chunks
+
+
+
+async def chunks_text_data(docs, user_id, file_id, file_name, chunk_size, chunk_overlap):
+    chunks = await asyncio.to_thread(chunks_text, docs, user_id, file_id, file_name, chunk_size, chunk_overlap)
     return chunks

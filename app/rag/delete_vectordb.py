@@ -18,7 +18,8 @@ async def delete_user_database(user_id:int, file_id:int):
         await run_in_threadpool(
             index.delete,
             namespace=f"user_{user_id}",
-            filter={"doc_id": {"$eq": file_id}}
+            # filter={"doc_id": {"$eq": file_id}}
+            filter={"doc_id": file_id}
         )
 
         return True

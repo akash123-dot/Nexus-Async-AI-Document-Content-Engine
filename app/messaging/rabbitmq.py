@@ -4,6 +4,9 @@ from app.config.settings import settings
 
 connection = None
 channel = None
+exchange = None  
+
+
 
 EXCHANGE_NAME = "task_exchange"
 MAIN_QUEUE = "task.main"
@@ -11,7 +14,7 @@ RETRY_QUEUE = "task.retry"
 DLQ_QUEUE = "task.dlq"
 
 async def connect_rabbitmq():
-    global connection, channel
+    global connection, channel, exchange
     
 
     # connection = await aio_pika.connect_robust("amqp://guest:guest@rabbitmq/")

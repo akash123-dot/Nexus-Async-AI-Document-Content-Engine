@@ -1,6 +1,7 @@
-import requests
+# import requests
 from datetime import datetime, timedelta 
 import re
+import httpx
 from app.config.settings import llm, settings
 
 NEWS_API_KEY = settings.NEWS_API_KEY
@@ -16,16 +17,26 @@ async def search_web(question:str)->str:
     raw_text = ""
     news = f"https://newsapi.org/v2/everything?q={question}&from={from_date.strftime('%Y-%m-%d')}&to={today.strftime('%Y-%m-%d')}&sortBy=relevancy&apiKey={NEWS_API_KEY}"
 
-    response = requests.get(news)
+    # response = requests.get(news)
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.get(news)
+
+    except Exception as e:
+        return "No news found"
 
     if response.status_code != 200:
         return "No news found"
 
     data = response.json()
 
-    for artical in data["articles"]:
-        text =artical["content"]
-        raw_text += text
+    for article in data.get("articles", []):
+        text = article.get("content")
+        if text:
+            raw_text += text + " "
+    
+    if not raw_text.strip():
+        return "No news found"
 
     clean_text = re.sub(r'\[\+\d+ chars\]', '', raw_text)
 

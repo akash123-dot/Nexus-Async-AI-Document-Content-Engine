@@ -15,6 +15,7 @@ from app.rag.text_file_chunck import (
     choose_chunk_strategy as txt_strategy
 )
 from app.rag.save_vectordb import save_to_pinecone
+import aiofiles
 # from dotenv import load_dotenv
 
 # load_dotenv()
@@ -48,8 +49,8 @@ async def processing_file_message(file_path, user_id, file_id, file_name, supaba
 
     try:
        
-        with open(temp_path, "wb") as f:
-            f.write(file_data)
+        async with aiofiles.open(temp_path, "wb") as f:
+            await f.write(file_data)
 
         read_data_func, strategy_func, chunks_data_func = PROCESSOR_MAP[suffix]
 

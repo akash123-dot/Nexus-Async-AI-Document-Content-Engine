@@ -15,19 +15,26 @@ embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", a
 pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(PINECONE_INDEX)
 
+
+vector_store = PineconeVectorStore(
+            index=index,
+            embedding=embeddings,
+            # namespace = f"user_{user_id}"
+        )
+
 async def save_to_pinecone(chunks, user_id):
     try:
         print(f"Attempting to save {len(chunks)} chunks to index.")
 
+        BATCH_SIZE = 100
+        namespace = f"user_{user_id}"
 
+        for i in range(0, len(chunks), BATCH_SIZE):
+            batch = chunks[i:i+BATCH_SIZE]
+            
 
-        vector_store = PineconeVectorStore(
-            index=index,
-            embedding=embeddings,
-            namespace = f"user_{user_id}"
-        )
-
-        await vector_store.aadd_documents(chunks)
+            await vector_store.aadd_documents(documents=batch,
+                                              namespace=namespace)
 
         print("Successfully saved to Pinecone.")
         return True

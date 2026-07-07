@@ -36,10 +36,10 @@ class UserFileRepository:
     ):
         
         result = await db.execute(
-            select(UserFileMetadata.id, UserFileMetadata.storage_path).where(UserFileMetadata.user_id == user_id)
+            select(UserFileMetadata).where(UserFileMetadata.user_id == user_id)
         )
 
-        return result.one_or_none()
+        return result.scalars().one_or_none()
     
 
     @staticmethod

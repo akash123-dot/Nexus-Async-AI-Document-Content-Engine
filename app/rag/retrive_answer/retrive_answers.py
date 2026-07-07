@@ -26,12 +26,14 @@ embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", a
 pc = Pinecone(api_key=PINECONE_API_KEY)
 index = pc.Index(PINECONE_INDEX)
 
+vector_store = PineconeVectorStore(embedding=embeddings,
+                                    index=index,
+                                    # namespace=f"user_{user_id}",
+                                    )
+
 async def retrive_answer(question, user_id, file_id) -> dict:
     
-    vector_store = PineconeVectorStore(embedding=embeddings,
-                                       index=index,
-                                       namespace=f"user_{user_id}",
-                                       )
+    user_namespace = f"user_{user_id}"
     
 
     comparison_keywords = ["difference", "compare", "vs", "versus", "contrast"]
@@ -39,12 +41,19 @@ async def retrive_answer(question, user_id, file_id) -> dict:
 
     if use_mmr:
         result = await vector_store.amax_marginal_relevance_search(
-            query=question, k=10, fetch_k=30, filter={"doc_id": file_id}
+            query=question,
+            k=10,
+            fetch_k=30,
+            filter={"doc_id": file_id},
+            namespace=user_namespace
         )
+
+        
     else:
         result_with_score = await vector_store.asimilarity_search_with_score(query=question,
                                                                          k=10,
-                                                                         filter={"doc_id": file_id,}
+                                                                         filter={"doc_id": file_id,},
+                                                                         namespace=user_namespace
                                                                                  )                                                                    
         valid_score = 0.4
 

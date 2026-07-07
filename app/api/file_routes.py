@@ -18,7 +18,7 @@ from app.rag.retrive_answer.retrive_answers import generate_answer
 from app.rag.delete_vectordb import delete_user_database
 from app.config.settings import settings
 from app.config.redis import get_redis
-from app.services.exceptions import NotFoundException
+from app.services.exceptions import NotFoundException, BadRequestException
 # import magic
 import uuid
 # import os
@@ -222,8 +222,24 @@ async def delete_file_data(
 
 
     await delete_user_database(user_id=user_id, file_id=file_id)
-    await supabase.storage.from_(BUCKET_NAME).remove([storage_path])
-    await UserFileService.delete_user_file_metadata(db=db, user_id=user_id)
+
+    try:
+        await supabase.storage.from_(BUCKET_NAME).remove([storage_path])
+    except Exception as e:
+        error_msg = str(e).lower()
+        if "404" in error_msg or "not found" in error_msg:
+            pass
+        else:
+            raise BadRequestException("Failed to delete file from storage")
+    
+    try:
+    
+        # await UserFileService.delete_user_file_metadata(db=db, user_id=user_id)
+        await db.delete(user_file_data)
+        await db.commit()
+
+    except Exception as e:
+        raise BadRequestException("Failed to delete file from database")
 
     await redis.delete(file_id_cache_key(user_id))
 

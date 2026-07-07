@@ -5,19 +5,19 @@ from .llm_generation import content_generation
 from .web_summerize import summarize_web
 from .save_database import save_database
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from google.api_core.exceptions import InvalidArgument
 
 async def intent_parser(db: AsyncSession, content: dict, question: str) -> str:
 
     try:
     
-        safety_domain_content = await safety_domain(content=content)
+        safety_domain_content = safety_domain(content=content)
         # print("passed safety domain")
-        temperature = await compute_temperature(content=safety_domain_content)
+        temperature = compute_temperature(content=safety_domain_content)
         # print("passed temperature")
         strategy_planing = await generate_planing(question=question, content=safety_domain_content)
         # print("passed planing")
-        prompt_building = await prompt_assembly(question=question, content=strategy_planing, planing=safety_domain_content)
+        prompt_building = prompt_assembly(question=question, content=strategy_planing, planing=safety_domain_content)
         # print("passed prompt")
 
         if content["web_search"] == True or content["realtime_search"] == True:

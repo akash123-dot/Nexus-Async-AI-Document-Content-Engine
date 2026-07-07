@@ -3,7 +3,7 @@ from app.schemas.content_gen_schemas import Creativity,Tone, WritingStyle, Conte
 
 
 
-async def safety_domain(content: dict):
+def safety_domain(content: dict):
     domains = ["politics", "health", "finance", "legal" ]
     has_domain = any(domain in content["domain"] for domain in domains)
     if has_domain:
@@ -23,7 +23,7 @@ async def safety_domain(content: dict):
 
 
 
-async def compute_temperature(content: dict):
+def compute_temperature(content: dict):
     
    
     creativity_base = {

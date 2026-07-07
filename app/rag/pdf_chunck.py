@@ -5,6 +5,7 @@
 from langchain_community.document_loaders import PyPDFLoader  
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import re
+import asyncio  
 
 
 
@@ -82,42 +83,22 @@ async def read_pdf(directory):
     file_loder = PyPDFLoader(directory)
     documents = await file_loder.aload()
 
-    for doc in documents:
-        doc.page_content = clean_pdf_text(doc.page_content)
 
-    stats = analyze_pdf(documents)          
+    def process_docs_sy():
+        
+        for doc in documents:
+            doc.page_content = clean_pdf_text(doc.page_content)
+
+        return analyze_pdf(documents)
+
+    stats = await asyncio.to_thread(process_docs_sy)             
 
     return documents, stats
 
 
-# async def chunks_pdf_data(docs,user_id, file_id, file_name, chunk_size, chunk_overlap):
-#     text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
-#         encoding_name="cl100k_base",
-#         chunk_size=chunk_size,
-#         chunk_overlap=chunk_overlap,
-#         separators=[
-#             "\n\n",
-#             ". ",
-#             "? ",
-#             "! ",
-#             " ",
-#             ""
-#         ]
-#     )
-#     chunks = text_splitter.split_documents(docs)
-#     chunks = [c for c in chunks if len(c.page_content.strip()) > 20]
-
-#     for chunk in chunks:
-#         chunk.metadata["source"] = user_id
-#         chunk.metadata["doc_id"] = file_id
-#         chunk.metadata["file_name"] = file_name
-#         chunk.metadata["page"] = chunk.metadata.get("page")
-
-#     return chunks
 
 
-
-async def chunks_pdf_data(docs, user_id, file_id, file_name, chunk_size, chunk_overlap):
+def chunks_pdf(docs, user_id, file_id, file_name, chunk_size, chunk_overlap):
 
     page_boundaries = []
     full_text = ""
@@ -144,4 +125,9 @@ async def chunks_pdf_data(docs, user_id, file_id, file_name, chunk_size, chunk_o
             "chunk_index": i
         })
 
+    return chunks
+
+
+async def chunks_pdf_data(docs, user_id, file_id, file_name, chunk_size, chunk_overlap):
+    chunks = await asyncio.to_thread(chunks_pdf, docs, user_id, file_id, file_name, chunk_size, chunk_overlap)
     return chunks

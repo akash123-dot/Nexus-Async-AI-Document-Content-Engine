@@ -16,7 +16,7 @@ def clean_json(text: str) -> str:
 
 
 
-async def prompt_assembly(question, content, planing):
+def prompt_assembly(question, content, planing):
     # print("CONTENT TYPE:", type(content))
     # print("CONTENT VALUE:", repr(content))
     # print("PLANNING TYPE:", type(planing))

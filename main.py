@@ -10,9 +10,9 @@ from app.config.redis import init_redis, close_redis
 from app.messaging.rabbitmq import connect_rabbitmq, close_rabbitmq
 from app.messaging.consumer import start_consumer
 from app.services.exceptions import AppBaseException
-from dotenv import load_dotenv
+# from dotenv import load_dotenv
 
-load_dotenv()
+# load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):
     
     await init_redis()
     await connect_rabbitmq()
-    await start_consumer()
+    # await start_consumer()
 
     yield
 

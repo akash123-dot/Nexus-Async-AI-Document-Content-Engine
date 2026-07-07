@@ -18,12 +18,15 @@ def clean_text(text: str) -> str:
 
 
 async def content_generation(prompt: str, temperature: float, toolcall: callable = None) -> str:
-    llm.temperature = temperature
+    # llm.temperature = temperature
 
     tool_output = ""
     if toolcall:
-        raw_text = await toolcall() 
-        tool_output = raw_text.strip()
+        try:
+            raw_text = await toolcall() 
+            tool_output = raw_text.strip()
+        except Exception as e:
+            tool_output = ""
 
 
     messages = [
@@ -41,7 +44,7 @@ async def content_generation(prompt: str, temperature: float, toolcall: callable
     messages.append(("human", human_text))
 
     try:
-        response = await llm.ainvoke(messages)
+        response = await llm.ainvoke(messages, temperature=temperature)
 
         cleaned_text  = clean_text(response.content)
 
