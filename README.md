@@ -549,6 +549,40 @@ A synchronous database driver blocks the event loop on every query, negating Fas
 ### Why selective indexing and no SELECT *?
 Every table in Nexus only indexes columns that are actually queried — foreign keys, status fields, user IDs, and cursor columns. Indexing every column wastes write performance and storage. Similarly, every query selects only the fields the response actually needs. `SELECT *` pulls unnecessary data across the network, wastes serialization time, and leaks schema details to the response layer. Both decisions are small but compound significantly at volume.
 
+## Advanced Platform Architecture Updates
+
+We have significantly hardened the stability and data integrity of the background processing engine with two major architectural patterns:
+
+---
+
+### 1. Smart Circuit Breaker & Resilient Retry Mechanism (RabbitMQ)
+
+Instead of traditional blind retry loops that cause "retry storms" during outages, our background consumer (`worker.py`) dynamically classifies failures before processing actions:
+
+* **Permanent Failures (Direct to DLQ):** If a file is corrupted, payload data is missing (`ValidationError`), or an unrecoverable LLM logic crash occurs, the worker immediately **ACKs** the message out of the queue and routes it straight to the **Dead Letter Queue (DLQ)**. Retrying broken data is a waste of CPU cycles.
+* **Transient Failures (Smart Retries with Backoff):** If the failure is caused by a temporary network blip, Supabase timeout, or database connection drop, a **Health Check Guard** activates.
+    * The worker probes the core infrastructure (`Postgres`, `Redis`, `Supabase`).
+    * If a widespread outage is detected, the worker **pauses execution locally for 10 seconds** to let systems recover, keeping the retry counter clean.
+    * If infrastructure is healthy but a minor blip occurred, it schedules a retry using an **Algorithmic Exponential Backoff** up to a maximum of **3 attempts** before routing to the DLQ.
+
+---
+
+### 2. Idempotent Cascading Deletion Strategy (RAG Engine)
+
+To prevent orphaned vectors and state-desynchronization when users delete files from the Retrieval-Augmented Generation (RAG) system, we enforce a strict **outside-in, authoritative deletion workflow**:
+
+#### The Safe Cascade Order:
+1. 🗑️ **Pinecone Vector Database** (Delete embedded chunks first)
+2. 🗄️ **Supabase Storage** (Delete physical cloud file asset second)
+3. 💾 **PostgreSQL Relational DB** (Delete authoritative database row last)
+
+#### Idempotency & Fault Tolerance
+PostgreSQL acts as the **source of absolute truth** for our FastAPI application. A file is only considered "deleted" by the frontend/API if its row is erased from PostgreSQL. 
+
+If a network or API timeout occurs halfway through the process—for example, Pinecone deletes successfully, but the Supabase storage call fails—the row remains in PostgreSQL. 
+* The user sees the file still exists and hits "Delete" again.
+* The system safely re-runs the pipeline. Because the deletion hooks are entirely **idempotent**, the worker will bypass the already-deleted Pinecone vectors gracefully without throwing errors, proceed to clear Supabase, and finally delete the PostgreSQL row.
+
 ---
 
 ## Local Setup
@@ -563,7 +597,14 @@ Every table in Nexus only indexes columns that are actually queried — foreign 
 git clone https://github.com/akash123-dot/Nexus-Async-AI-Document-Content-Engine
 cd Nexus-Async-AI-Document-Content-Engine
 cp .env.example .env   # fill in your keys
+docker compose up
+
+# or you can directly run 
 docker compose up --build
+Open the docker-compose.yml file and ensure the application services (migrations, api, worker) have their local build context active:
+
+image: akash178/ai-document-content-engine:latest
+build: .  # <--- UNCOMMENT THIS LINE
 ```
 
 
@@ -574,13 +615,15 @@ docker compose up --build
 
 ```env
 # PostgreSQL
-DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/nexus
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/fastapi_test_db
+
 
 # Redis
-REDIS_URL=redis://localhost:6379
+REDIS_HOST=redis
+REDIS_PORT=6379
 
 # RabbitMQ
-RABBITMQ_URL=amqp://guest:guest@localhost:5672/
+RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
 
 # Supabase
 SUPABASE_URL=https://your-project.supabase.co

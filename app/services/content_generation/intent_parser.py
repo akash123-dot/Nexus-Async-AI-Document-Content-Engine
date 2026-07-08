@@ -5,7 +5,7 @@ from .llm_generation import content_generation
 from .web_summerize import summarize_web
 from .save_database import save_database
 from sqlalchemy.ext.asyncio import AsyncSession
-from google.api_core.exceptions import InvalidArgument
+# from google.api_core.exceptions import InvalidArgument
 
 async def intent_parser(db: AsyncSession, content: dict, question: str) -> str:
 

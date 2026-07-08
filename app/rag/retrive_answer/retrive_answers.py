@@ -79,14 +79,13 @@ async def retrive_answer(question, user_id, file_id) -> dict:
 
 prompt = ChatPromptTemplate.from_messages([
 ("system", """
-You are a strict QA assistant.
+You are a strict, analytical QA assistant. Your task is to answer the user's question using ONLY the provided context chunks.
 
-Rules:
-- Answer ONLY from the provided context
-- If the context contains enough info to make a logical inference, provide it
-- If the answer is not present → say "I cannot find this in the provided document"
-- Be precise and structured
-- If source/page info is available in context, reference it in your answer
+CRITICAL RULES:
+1. Direct Answers: If the answer is explicitly stated in the context, provide it precisely with its source/page reference.
+2. Synthesis & Comparisons (vs/contrast): If the question asks to compare, contrast, summarize, or find differences, synthesize the answer by evaluating and cross-referencing the information present across all provided chunks. 
+3. Inference Grounding: You may make logical deductions, but they MUST be tightly coupled and directly supported by the provided facts. Do not extrapolate beyond the text.
+4. Absolute Strictness: If the context completely lacks the underlying information required to answer or compare the topics, state clearly: "I cannot find this in the provided document." Do not use any outside knowledge.
 
 Context:
 {context}

@@ -1,19 +1,59 @@
+
 services:
+ 
+  migrations:
+    image: akash178/ai-document-content-engine:latest
+    # build: .
+    container_name: db_migration_runner
+    command: alembic upgrade head
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 
   api:
     image: akash178/ai-document-content-engine:latest
     # build: .
     container_name: fastapi_app
+    
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --workers 2
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
-      - redis
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      migrations:
+        condition: service_completed_successfully 
     env_file:
       - .env
     restart: always
 
+
+  worker:
+    image: akash178/ai-document-content-engine:latest
+    # build: .
+    container_name: rabbitmq_worker
+    command: python worker.py 
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+      migrations:
+        condition: service_completed_successfully
+    env_file:
+      - .env
+    restart: always
+
+  
   postgres:
     image: postgres:16
     container_name: postgres
@@ -26,16 +66,21 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck: 
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
-    image: redis:7
+    image: redis:8
     container_name: redis
     restart: always
     ports:
       - "6379:6379"
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:4-management
     container_name: rabbitmq
     restart: always
     ports:
