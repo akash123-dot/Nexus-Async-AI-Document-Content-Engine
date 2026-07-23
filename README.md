@@ -547,6 +547,33 @@ A synchronous database driver blocks the event loop on every query, negating Fas
 ### Why selective indexing and no SELECT *?
 Every table in Nexus only indexes columns that are actually queried — foreign keys, status fields, user IDs, and cursor columns. Indexing every column wastes write performance and storage. Similarly, every query selects only the fields the response actually needs. `SELECT *` pulls unnecessary data across the network, wastes serialization time, and leaks schema details to the response layer. Both decisions are small but compound significantly at volume.
 
+### Why switch between MMR and similarity search for retrieval?
+Not all questions need the same retrieval strategy. A comparison question like "what's the difference between X and Y" needs *diverse* chunks covering both sides — plain similarity search tends to return near-duplicate chunks clustered around the single closest match, which starves the LLM of contrasting context. Nexus detects comparison intent by checking the question for keywords (`difference`, `compare`, `vs`, `versus`, `contrast`) and routes to `amax_marginal_relevance_search` (MMR) instead, which fetches a wider candidate pool (`fetch_k=30`) and selects `k=10` chunks that balance relevance with diversity — reducing redundancy so both sides of the comparison actually make it into context.
+
+For regular factual questions, plain `asimilarity_search_with_score` is used — it's cheaper and more precise when you just need the single most relevant chunks, and the returned similarity score lets low-confidence matches be filtered before they reach the LLM.
+
+```python
+comparison_keywords = ["difference", "compare", "vs", "versus", "contrast"]
+use_mmr = any(kw in question.lower() for kw in comparison_keywords)
+
+if use_mmr:
+    result = await vector_store.amax_marginal_relevance_search(
+        query=question,
+        k=10,
+        fetch_k=30,
+        filter={"doc_id": file_id},
+        namespace=user_namespace
+    )
+else:
+    result_with_score = await vector_store.asimilarity_search_with_score(
+        query=question,
+        k=10,
+        filter={"doc_id": file_id},
+        namespace=user_namespace
+    )
+```
+
+
 ## Advanced Platform Architecture Updates
 
 We have significantly hardened the stability and data integrity of the background processing engine with two major architectural patterns:
